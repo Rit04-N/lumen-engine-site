@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumen_Engine — Receipt OCR</title>
+<meta name="description" content="Receipt and invoice OCR. Drop an image, get structured data instantly. No account. No login.">
+<meta property="og:title" content="Lumen_Engine — Receipt OCR">
+<meta property="og:description" content="Drop a receipt. Get structured data — amount, date, merchant, category — in under 400ms.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://rit04-n.github.io/lumen-engine-site">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Lumen_Engine — Receipt OCR">
+<meta name="twitter:description" content="Drop a receipt. Get structured data in under 400ms.">
+<style>
+:root {
+  --black:#080808;--surface:#0f0f0f;--card:#141414;
+  --border:#1e1e1e;--border-b:#2a2a2a;
+  --green:#a8e63d;--gd:#6fa826;--gbg:#0d1505;
+  --text:#efefef;--muted:#666;--subtle:#2a2a2a;
+  --danger:#e05252;--warn:#d4a017;
+  --mono:'SF Mono','Fira Code',monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --r:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--black);color:var(--text);font-family:var(--sans);overflow-x:hidden;line-height:1.6}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:18px 48px;transition:background 0.3s,border-color 0.3s;border-bottom:0.5px solid transparent}
+nav.s{background:rgba(8,8,8,0.92);backdrop-filter:blur(16px);border-color:var(--border)}
+.logo{font-family:var(--mono);font-size:13px;letter-spacing:0.1em;color:var(--green);text-decoration:none}
+.logo span{color:var(--muted)}
+.nav-r{display:flex;align-items:center;gap:28px}
+.nav-links{display:flex;gap:28px;list-style:none}
+.nav-links a{font-size:13px;color:var(--muted);text-decoration:none;transition:color 0.2s}
+.nav-links a:hover{color:var(--text)}
+.nav-cta{font-family:var(--mono);font-size:11px;background:var(--green);color:var(--black);padding:6px 16px;border-radius:100px;text-decoration:none;font-weight:700;transition:opacity 0.2s}
+.nav-cta:hover{opacity:0.85}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;background:none;border:none}
+.hamburger span{width:20px;height:1.5px;background:var(--muted);border-radius:2px;transition:all 0.3s}
+.mobile-menu{display:none;position:fixed;top:57px;left:0;right:0;background:rgba(8,8,8,0.98);border-bottom:0.5px solid var(--border);padding:20px 24px;flex-direction:column;gap:16px;z-index:99}
+.mobile-menu a{font-size:14px;color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:0.5px solid var(--border)}
+.mobile-menu a:last-child{border-bottom:none;color:var(--green)}
+.mobile-menu.open{display:flex}
+
+/* HERO */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:120px 24px 80px;position:relative;overflow:hidden}
+.hero-glow{position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(168,230,61,0.06),transparent 70%);top:50%;left:50%;transform:translate(-50%,-60%);pointer-events:none}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:0.2em;color:var(--green);text-transform:uppercase;margin-bottom:24px;opacity:0;animation:fu 0.8s 0.3s forwards;display:flex;align-items:center;gap:8px;justify-content:center}
+.eyebrow::before{content:'';width:16px;height:1px;background:var(--gd)}
+h1{font-size:clamp(48px,9vw,104px);font-weight:600;letter-spacing:-0.04em;line-height:1.02;margin-bottom:24px;opacity:0;animation:fu 0.8s 0.5s forwards}
+.typed{color:var(--green)}
+.typed.done{border-right:none!important}
+.hero-sub{font-size:clamp(15px,1.8vw,19px);color:var(--muted);max-width:500px;line-height:1.75;margin-bottom:44px;opacity:0;animation:fu 0.8s 0.9s forwards}
+.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;opacity:0;animation:fu 0.8s 1.1s forwards}
+.btn-p{background:var(--green);color:var(--black);padding:12px 26px;border-radius:var(--r);font-size:14px;font-weight:600;text-decoration:none;transition:opacity 0.2s,transform 0.2s}
+.btn-p:hover{opacity:0.88;transform:translateY(-1px)}
+.btn-g{border:0.5px solid var(--border-b);color:var(--muted);padding:12px 26px;border-radius:var(--r);font-size:14px;text-decoration:none;transition:border-color 0.2s,color 0.2s}
+.btn-g:hover{border-color:var(--gd);color:var(--text)}
+
+/* floating data cards */
+.floaters{position:absolute;inset:0;pointer-events:none}
+.fc{position:absolute;background:var(--card);border:0.5px solid var(--border);border-radius:10px;padding:12px 16px;font-family:var(--mono);font-size:11px;color:var(--muted);opacity:0}
+.fc .v{color:var(--green);font-size:13px;font-weight:500;margin-bottom:3px}
+.fc.a{top:20%;left:5%;animation:fi 1s 1.5s forwards,fy 7s 2.5s ease-in-out infinite}
+.fc.b{top:26%;right:4%;animation:fi 1s 1.8s forwards,fy 7s 2.8s ease-in-out infinite}
+.fc.c{bottom:24%;left:7%;animation:fi 1s 2.1s forwards,fy 7s 3.1s ease-in-out infinite}
+.fc.d{bottom:20%;right:6%;animation:fi 1s 2.4s forwards,fy 7s 3.4s ease-in-out infinite}
+.scroll-cue{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:0.1em;opacity:0;animation:fu 0.8s 1.8s forwards}
+.scroll-line{width:1px;height:36px;background:linear-gradient(var(--green),transparent);animation:sp 2s ease-in-out infinite}
+
+/* PIPELINE */
+.pipeline{background:var(--surface);border-top:0.5px solid var(--border);border-bottom:0.5px solid var(--border)}
+.inner{max-width:1100px;margin:0 auto;padding:100px 48px}
+.slabel{font-family:var(--mono);font-size:11px;letter-spacing:0.15em;color:var(--green);text-transform:uppercase;margin-bottom:14px}
+.stitle{font-size:clamp(28px,4vw,48px);font-weight:600;letter-spacing:-0.025em;line-height:1.18;margin-bottom:16px}
+.ssub{font-size:16px;color:var(--muted);line-height:1.75;max-width:540px}
+.flow-line{height:1px;background:linear-gradient(90deg,transparent,var(--green),transparent);margin:48px 0;opacity:0;transition:opacity 1s}
+.flow-line.vis{opacity:1}
+.pgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);border-radius:12px;overflow:hidden;margin-top:0}
+.ps{background:var(--card);padding:28px 22px;opacity:0;transform:translateY(16px);transition:opacity 0.5s,transform 0.4s,background 0.2s}
+.ps.vis{opacity:1;transform:translateY(0)}
+.ps:hover{background:#181818}
+.pnum{font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:0.1em;margin-bottom:14px}
+.pico{font-size:22px;margin-bottom:14px;display:block;color:var(--gd)}
+.pname{font-size:14px;font-weight:600;margin-bottom:10px;color:var(--text)}
+.ppts{list-style:none;display:flex;flex-direction:column;gap:5px}
+.ppts li{font-size:11.5px;color:var(--muted);line-height:1.5;padding-left:11px;position:relative}
+.ppts li::before{content:'·';position:absolute;left:0;color:var(--green)}
+
+/* DEMO */
+.demo-s{border-top:0.5px solid var(--border)}
+.demo-wrap{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:48px;align-items:start}
+.prog-bar{display:flex;border-radius:6px;overflow:hidden;margin-bottom:16px;border:0.5px solid var(--border)}
+.pg{flex:1;padding:7px 4px;text-align:center;font-family:var(--mono);font-size:9px;letter-spacing:0.04em;color:var(--muted);background:var(--card);border-right:0.5px solid var(--border);transition:background 0.3s,color 0.3s}
+.pg:last-child{border-right:none}
+.pg.act{background:var(--gbg);color:var(--green)}
+.pg.done{background:#0c1804;color:var(--gd)}
+.drop-z{border:1px dashed var(--border-b);border-radius:12px;padding:56px 24px;text-align:center;cursor:pointer;transition:border-color 0.2s,background 0.2s;background:var(--card)}
+.drop-z:hover,.drop-z.over{border-color:var(--gd);background:var(--gbg)}
+.drop-z:focus{outline:2px solid var(--gd);outline-offset:2px}
+.drop-ico{width:48px;height:48px;border:0.5px solid var(--border-b);border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:20px;color:var(--muted);transition:border-color 0.2s}
+.drop-z:hover .drop-ico{border-color:var(--gd)}
+.drop-t{font-size:14px;font-weight:500;margin-bottom:6px}
+.drop-s{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:0.04em}
+.demo-note{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;margin-top:10px}
+.demo-note strong{color:var(--text)}
+.result-panel{min-height:280px}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:280px;gap:10px;color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center}
+.empty-ico{font-size:28px;opacity:0.25}
+
+/* results */
+.file-bar{display:flex;align-items:center;gap:10px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:9px 12px;margin-bottom:14px}
+.file-thumb{width:36px;height:36px;object-fit:cover;border-radius:4px;background:var(--border);flex-shrink:0}
+.file-ico{width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--surface);border:0.5px solid var(--border);border-radius:4px;color:var(--gd);font-size:16px;flex-shrink:0}
+.fname{font-size:13px;font-weight:500;color:var(--text)}
+.fsize{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:1px}
+.cbadge{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;padding:4px 10px;border-radius:100px;border:0.5px solid;margin-bottom:14px}
+.ch{color:var(--green);border-color:var(--gd);background:var(--gbg)}
+.cm{color:var(--warn);border-color:#5a420a;background:#1a1305}
+.cl,.cr{color:var(--danger);border-color:#5a1a1a;background:#1a0808}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.fb{background:var(--card);padding:14px 16px}
+.flabel{font-family:var(--mono);font-size:10px;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:5px}
+.fval{font-size:17px;font-weight:500;color:var(--text);margin-bottom:5px;word-break:break-word}
+.fval.amt{color:var(--green)}
+.fval.nil{font-size:13px;color:var(--subtle);font-weight:400;font-style:italic}
+.fmeta{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px}
+.bw{height:2px;background:var(--border);border-radius:1px}
+.bf{height:100%;background:var(--gd);border-radius:1px;width:0;transition:width 0.9s ease}
+.ptime{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:6px}
+.jtog{background:none;border:none;color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;padding:0;transition:color 0.2s}
+.jtog:hover{color:var(--text)}
+.jblock{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:12px;font-family:var(--mono);font-size:11px;color:var(--muted);white-space:pre;overflow:auto;max-height:180px;display:none;margin-top:6px;line-height:1.7}
+.errbox{background:#1a0808;border:0.5px solid #5a1a1a;border-radius:var(--r);padding:12px 14px;font-size:13px;color:var(--danger)}
+.spinner{width:13px;height:13px;border:1.5px solid var(--border-b);border-top-color:var(--green);border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0}
+.lrow{display:flex;align-items:center;gap:10px;color:var(--muted);font-family:var(--mono);font-size:12px;padding:20px 0}
+
+/* RATE LIMIT */
+.rl-wall{background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:32px;text-align:center;display:none}
+.rl-wall.show{display:block}
+.rl-icon{font-size:28px;margin-bottom:12px;opacity:0.6}
+.rl-title{font-size:16px;font-weight:500;margin-bottom:8px;color:var(--text)}
+.rl-sub{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:24px}
+.rl-timer{font-family:var(--mono);font-size:20px;color:var(--green);margin-bottom:20px;letter-spacing:0.05em}
+
+/* ACCESS FORM */
+.access-form{margin-top:20px;text-align:left}
+.access-form h3{font-size:14px;font-weight:500;margin-bottom:4px;color:var(--text)}
+.access-form p{font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6}
+.form-group{margin-bottom:12px}
+.form-label{font-family:var(--mono);font-size:10px;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px}
+.form-input,.form-textarea{width:100%;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--sans);font-size:13px;padding:9px 12px;outline:none;transition:border-color 0.2s;resize:vertical}
+.form-input:focus,.form-textarea:focus{border-color:var(--gd)}
+.form-textarea{min-height:80px;line-height:1.5}
+.form-select{width:100%;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--sans);font-size:13px;padding:9px 12px;outline:none;transition:border-color 0.2s;appearance:none}
+.form-select:focus{border-color:var(--gd)}
+.form-submit{width:100%;background:var(--green);color:var(--black);border:none;border-radius:var(--r);font-size:13px;font-weight:700;padding:10px;cursor:pointer;transition:opacity 0.2s;margin-top:4px;font-family:var(--sans)}
+.form-submit:hover{opacity:0.85}
+.form-success{background:var(--gbg);border:0.5px solid var(--gd);border-radius:var(--r);padding:12px;font-size:13px;color:var(--green);text-align:center;display:none}
+
+/* API */
+.api-s{border-top:0.5px solid var(--border);background:var(--surface)}
+.api-grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;margin-top:48px;align-items:start}
+.ep{background:var(--card);border:0.5px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px;transition:border-color 0.3s}
+.ep:hover{border-color:var(--gd)}
+.eph{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:0.5px solid var(--border);background:var(--surface)}
+.mb{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--green);background:var(--gbg);padding:3px 8px;border-radius:4px}
+.ep-path{font-family:var(--mono);font-size:13px;color:var(--text)}
+.code{padding:18px;font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.9;overflow-x:auto;white-space:pre}
+.ck{color:#7aa2f7}.cs{color:#9ece6a}.cn{color:#ff9e64}.cc{color:var(--subtle)}
+.feats{display:flex;flex-direction:column;gap:20px}
+.feat{display:flex;gap:14px;align-items:flex-start;padding:12px;border-radius:10px;transition:background 0.2s}
+.feat:hover{background:var(--card)}
+.ficon{width:36px;height:36px;background:var(--gbg);border:0.5px solid var(--gd);border-radius:var(--r);display:flex;align-items:center;justify-content:center;color:var(--green);flex-shrink:0;font-size:15px}
+.ftitle{font-size:14px;font-weight:600;margin-bottom:3px;color:var(--text)}
+.fdesc{font-size:13px;color:var(--muted);line-height:1.6}
+
+/* FOOTER */
+footer{border-top:0.5px solid var(--border);padding:40px 48px;max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px}
+.fl{display:flex;flex-direction:column;gap:6px}
+.flogo{font-family:var(--mono);font-size:13px;color:var(--green);letter-spacing:0.1em}
+.fby{font-size:12px;color:var(--muted)}
+.fby a{color:var(--muted);text-decoration:none;transition:color 0.2s}
+.fby a:hover{color:var(--text)}
+.flinks{display:flex;gap:20px}
+.flinks a{font-family:var(--mono);font-size:11px;color:var(--muted);text-decoration:none;transition:color 0.2s}
+.flinks a:hover{color:var(--green)}
+
+/* REVEAL */
+.rv{opacity:0;transform:translateY(28px) scale(0.98);transition:opacity 0.7s cubic-bezier(.16,1,.3,1),transform 0.7s cubic-bezier(.16,1,.3,1)}
+.rv.vis{opacity:1;transform:none}
+
+/* ANIMATIONS */
+@keyframes fu{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fi{from{opacity:0;transform:translateY(12px)}to{opacity:0.65;transform:translateY(0)}}
+@keyframes fy{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes sp{0%,100%{opacity:1}50%{opacity:0.3}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* STAT STRIP */
+.stats{display:flex;flex-direction:row;gap:1px;background:var(--border);border-radius:12px;overflow:hidden;margin-top:48px;width:100%;opacity:0;animation:fu 0.8s 1.3s forwards}.stat{flex:1;min-width:0}
+.stat{background:var(--card);padding:24px 20px;text-align:center}
+.stat-num{font-family:var(--mono);font-size:clamp(28px,4vw,40px);font-weight:600;color:var(--green);letter-spacing:-0.03em;line-height:1;margin-bottom:6px}
+.stat-label{font-family:var(--mono);font-size:10px;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase}
+
+/* BENTO */
+.bento{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1px;background:var(--border);border-radius:12px;overflow:hidden;margin-top:48px}
+.bcard{background:var(--card);padding:28px 24px;transition:background 0.2s}
+.bcard:hover{background:#181818}
+.bcard.wide{grid-column:span 2}
+.bcard-label{font-family:var(--mono);font-size:10px;letter-spacing:0.12em;color:var(--green);text-transform:uppercase;margin-bottom:10px}
+.bcard-num{font-family:var(--mono);font-size:clamp(32px,4vw,48px);font-weight:600;color:var(--text);letter-spacing:-0.03em;line-height:1;margin-bottom:8px}
+.bcard-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px}
+.bcard-desc{font-size:13px;color:var(--muted);line-height:1.65}
+.bcard-bar{height:2px;background:var(--border);border-radius:1px;margin-top:14px}
+.bcard-fill{height:100%;background:var(--gd);border-radius:1px}
+
+/* SWITCHER */
+.switcher-s{border-top:0.5px solid var(--border);background:var(--surface)}
+.sw-tabs{display:flex;gap:1px;background:var(--border);border-radius:8px;overflow:hidden;margin-bottom:24px;width:fit-content}
+.sw-tab{font-family:var(--mono);font-size:12px;padding:8px 20px;background:var(--card);color:var(--muted);border:none;cursor:pointer;transition:background 0.2s,color 0.2s;letter-spacing:0.04em}
+.sw-tab.active{background:var(--gbg);color:var(--green)}
+.sw-panels{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+.sw-desc{display:flex;flex-direction:column;gap:16px}
+.sw-claim{font-size:14px;color:var(--text);line-height:1.65;padding:16px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);border-left:2px solid var(--green)}
+.sw-result{background:var(--card);border:0.5px solid var(--border);border-radius:12px;overflow:hidden}
+.sw-rh{padding:12px 16px;border-bottom:0.5px solid var(--border);background:var(--surface);font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;align-items:center;justify-content:space-between}
+.sw-body{padding:16px}
+.sw-field{margin-bottom:14px}
+.sw-field:last-child{margin-bottom:0}
+.sw-flabel{font-family:var(--mono);font-size:10px;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:4px}
+.sw-fval{font-size:16px;font-weight:500;color:var(--text);margin-bottom:4px}
+.sw-fval.g{color:var(--green)}
+.sw-fval.nil{font-size:13px;color:var(--subtle);font-style:italic;font-weight:400}
+.sw-bar-w{height:2px;background:var(--border);border-radius:1px}
+.sw-bar-f{height:100%;border-radius:1px;transition:width 0.6s ease}
+
+/* RESPONSIVE */
+@media(max-width:1050px){
+  .demo-wrap{grid-template-columns:1fr}
+  .api-grid{grid-template-columns:1fr}
+  .sw-panels{grid-template-columns:1fr}
+  .bcard.wide{grid-column:span 1}
+}
+@media(max-width:860px){
+  nav{padding:14px 20px}
+  .nav-links{display:none}
+  .hamburger{display:flex}
+  .inner{padding:72px 20px}
+  .pgrid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  .fc{display:none}
+  footer{padding:28px 20px;flex-direction:column;align-items:flex-start}
+}
+@media(max-width:480px){
+  .stats{gap:0px}
+  .stat{padding:16px 8px}
+  .stat-num{font-size:20px}
+  .stat-label{font-size:9px;letter-spacing:0.06em}
+  h1{font-size:42px}
+}
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <a href="#" class="logo">Lumen<span>_</span>Engine</a>
+  <div class="nav-r">
+    <ul class="nav-links">
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#demo">Live demo</a></li>
+      <li><a href="#api">API</a></li>
+    </ul>
+    <a href="#demo" class="nav-cta">Try it</a>
+    <button class="hamburger" id="ham" aria-label="Menu" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<div class="mobile-menu" id="mmenu">
+  <a href="#how" onclick="closeMenu()">How it works</a>
+  <a href="#demo" onclick="closeMenu()">Live demo</a>
+  <a href="#api" onclick="closeMenu()">API</a>
+  <a href="#demo" onclick="closeMenu()">Try it →</a>
+</div>
+
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="floaters">
+    <div class="fc a"><div class="v">USD 47.83</div><div>amount · 94%</div></div>
+    <div class="fc b"><div class="v">2025-01-15</div><div>date · 91%</div></div>
+    <div class="fc c"><div class="v">City Supermarket</div><div>merchant · 89%</div></div>
+    <div class="fc d"><div class="v">groceries</div><div>category · 91%</div></div>
+  </div>
+  <div class="eyebrow">Receipt &amp; Invoice OCR Engine</div>
+  <h1><span class="typed" id="typed" style="border-right:2px solid var(--green)"></span></h1>
+  <p class="hero-sub">Drop a receipt. Get structured data — amount, date, merchant, category — in under 400ms. Tesseract-powered. No cloud OCR. Runs in the container.</p>
+  <div class="hero-btns">
+    <a href="#demo" class="btn-p">Try live demo</a>
+    <a href="#how" class="btn-g">See how it works</a>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-num">&lt;400ms</div><div class="stat-label">typical processing</div></div>
+    <div class="stat"><div class="stat-num">0.94</div><div class="stat-label">peak confidence</div></div>
+    <div class="stat"><div class="stat-num">8</div><div class="stat-label">languages supported</div></div>
+    <div class="stat"><div class="stat-num">14</div><div class="stat-label">category types</div></div>
+    <div class="stat"><div class="stat-num">5</div><div class="stat-label">pipeline stages</div></div>
+  </div>
+  <div class="scroll-cue"><span>scroll</span><div class="scroll-line"></div></div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" class="pipeline">
+  <div class="inner">
+    <div class="rv">
+      <div class="slabel">Architecture</div>
+      <h2 class="stitle">Five stages.<br>Every receipt.</h2>
+      <p class="ssub">Every image passes through all five stages in sequence. Each stage is isolated — failure in one falls back gracefully rather than crashing the pipeline.</p>
+    </div>
+    <div class="flow-line" id="fl"></div>
+    <div class="pgrid">
+      <div class="ps" data-d="0"><span class="pico">◆</span><div class="pnum">01 / INTAKE</div><div class="pname">Intake Gate</div><ul class="ppts"><li>Validates JPEG, PNG, WEBP, PDF, HEIC</li><li>Detects corruption before processing begins</li><li>Enforces the 10MB size limit early</li><li>Classifies document type — receipt or invoice</li><li>Rejects unreadable files with clear diagnostics</li></ul></div>
+      <div class="ps" data-d="120"><span class="pico">◈</span><div class="pnum">02 / OPTIMISE</div><div class="pname">Adaptive Optimisation</div><ul class="ppts"><li>Measures brightness, contrast, sharpness, noise</li><li>Detects skew angle and perspective distortion</li><li>Only applies operations that are actually needed</li><li>Verifies each step — rolls back if quality regresses</li><li>Original image preserved throughout as fallback</li></ul></div>
+      <div class="ps" data-d="240"><span class="pico">◎</span><div class="pnum">03 / OCR</div><div class="pname">Text Extraction</div><ul class="ppts"><li>Tesseract LSTM — PSM 6 uniform block mode</li><li>Multi-pass retry with alternative PSM modes</li><li>Per-word confidence scores tracked throughout</li><li>Falls back to original image if optimised fails</li><li>English, Sinhala, Tamil, Arabic + 5 more scripts</li></ul></div>
+      <div class="ps" data-d="360"><span class="pico">◇</span><div class="pnum">04 / EXTRACT</div><div class="pname">Universal Extraction</div><ul class="ppts"><li>Normalises Persian, Sinhala, Tamil, Chinese digits</li><li>Multi-signal amount scoring — keyword, position, magnitude</li><li>Date extraction across all major formats worldwide</li><li>Merchant detection with Levenshtein fuzzy matching</li><li>14 universal category types with three-signal scoring</li></ul></div>
+      <div class="ps" data-d="480"><span class="pico">◉</span><div class="pnum">05 / VALIDATE</div><div class="pname">Validation Gate</div><ul class="ppts"><li>Field-level validation — range, format, confidence</li><li>Cross-field consistency checks with penalty modifiers</li><li>Weighted confidence: amount 40%, date 30%, rest 30%</li><li>HIGH / MEDIUM / LOW / REJECTED response levels</li><li>When uncertain returns null — never guesses</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- LIVE DEMO -->
+<section id="demo" class="demo-s">
+  <div class="inner">
+    <div class="rv">
+      <div class="slabel">Live Demo</div>
+      <h2 class="stitle">Drop a receipt.<br>Watch it process.</h2>
+      <p class="ssub">Upload any receipt or invoice. The pipeline runs in real time — see each stage complete and get structured data with per-field confidence scores.</p>
+    </div>
+    <div class="demo-wrap">
+      <div>
+        <div class="prog-bar" id="pbar" aria-label="Pipeline progress">
+          <div class="pg" id="p1">INTAKE</div>
+          <div class="pg" id="p2">OPTIMISE</div>
+          <div class="pg" id="p3">OCR</div>
+          <div class="pg" id="p4">EXTRACT</div>
+          <div class="pg" id="p5">VALIDATE</div>
+        </div>
+        <div class="drop-z" id="dz" role="button" tabindex="0" aria-label="Upload receipt or invoice image"
+          onclick="document.getElementById('fi').click()"
+          onkeydown="if(event.key==='Enter'||event.key===' ')document.getElementById('fi').click()"
+          ondragover="dzev('over',event)" ondragleave="dzev('leave',event)" ondrop="dzev('drop',event)">
+          <div class="drop-ico">↑</div>
+          <div class="drop-t">Drop receipt or invoice here</div>
+          <div class="drop-s">JPEG · PNG · WEBP · PDF · HEIC · max 10 MB</div>
+        </div>
+        <input type="file" id="fi" accept=".jpg,.jpeg,.png,.webp,.pdf,.heic" style="display:none" onchange="onpick(event)"/>
+        <p class="demo-note">Processed by <strong>Lumen_Engine</strong> · lumen-engine.onrender.com</p>
+        <p class="demo-note" style="margin-top:4px" id="req-counter"></p>
+      </div>
+      <div aria-live="polite" aria-atomic="true">
+        <!-- rate limit wall -->
+        <div class="rl-wall" id="rlwall">
+          <div class="rl-icon">◎</div>
+          <div class="rl-title">Demo limit reached</div>
+          <div class="rl-sub">You've used all 10 free demo requests. This resets in 5 hours.<br>Want unlimited access? Tell us what you're building.</div>
+          <div class="rl-timer" id="rltimer">05:00:00</div>
+          <div class="access-form">
+            <h3>Request API access</h3>
+            <p>Answer honestly — we read every submission. A real project link is the best signal.</p>
+            <form id="aform" onsubmit="submitAccess(event)">
+              <div class="form-group">
+                <label class="form-label" for="f-name">Your name</label>
+                <input class="form-input" id="f-name" type="text" required placeholder="Nithika Manawadu" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="f-email">Email</label>
+                <input class="form-input" id="f-email" type="email" required placeholder="you@example.com" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="f-what">What are you building? <span style="color:var(--green)">*</span></label>
+                <textarea class="form-textarea" id="f-what" required minlength="80" placeholder="Describe your project in at least 2–3 sentences. What problem does it solve? Who uses it?"></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="f-link">Project / GitHub / company link <span style="color:var(--green)">*</span></label>
+                <input class="form-input" id="f-link" type="url" required placeholder="https://github.com/you/your-project" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="f-vol">Receipts per day (approximate)</label>
+                <select class="form-select" id="f-vol">
+                  <option value="">Select range</option>
+                  <option>Under 100</option>
+                  <option>100 – 1,000</option>
+                  <option>1,000 – 10,000</option>
+                  <option>Over 10,000</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="f-country">Primary receipt country / region</label>
+                <input class="form-input" id="f-country" type="text" placeholder="e.g. Sri Lanka, India, UK" />
+              </div>
+              <button class="form-submit" type="submit">Send access request →</button>
+            </form>
+            <div class="form-success" id="fsuccess">✓ Request sent. We'll review it and get back to you within 48 hours.</div>
+          </div>
+        </div>
+        <!-- results -->
+        <div id="rp" class="result-panel">
+          <div class="empty-state">
+            <div class="empty-ico">◉</div>
+            <div>Results appear here</div>
+            <div style="font-size:11px;opacity:0.5;font-family:var(--mono)">Drop a receipt to start</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONFIDENCE SWITCHER -->
+<section class="switcher-s">
+  <div class="inner">
+    <div class="rv">
+      <div class="slabel">Honest confidence</div>
+      <h2 class="stitle">See what happens<br>when it's uncertain.</h2>
+      <p class="ssub">Lumen never fills in a guess. Compare the output from a clean receipt versus a blurry one — the difference is in the nulls.</p>
+    </div>
+    <div style="margin-top:40px">
+      <div class="sw-tabs">
+        <button class="sw-tab active" onclick="swTab(0)">Clear receipt</button>
+        <button class="sw-tab" onclick="swTab(1)">Blurry / damaged</button>
+      </div>
+      <div class="sw-panels">
+        <div class="sw-desc" id="sw-desc">
+          <div class="sw-claim" id="sw-claim">A well-lit, straight-on photo of a printed receipt. All five pipeline stages complete successfully. Four fields extracted with high confidence.</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--muted)" id="sw-meta">Processing time: 312ms &nbsp;·&nbsp; OCR confidence: 0.91 &nbsp;·&nbsp; Stages: all passed</div>
+        </div>
+        <div class="sw-result">
+          <div class="sw-rh">
+            <span id="sw-badge" style="font-family:var(--mono);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--green);background:var(--gbg);border:0.5px solid var(--gd);padding:3px 10px;border-radius:100px">high confidence</span>
+            <span id="sw-ms" style="font-family:var(--mono);font-size:11px;color:var(--muted)">312ms</span>
+          </div>
+          <div class="sw-body" id="sw-body">
+            <div class="sw-field">
+              <div class="sw-flabel">Amount</div>
+              <div class="sw-fval g" id="sw-amount">USD 47.83</div>
+              <div class="sw-bar-w"><div class="sw-bar-f" id="sw-abar" style="width:94%;background:var(--gd)"></div></div>
+              <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:3px" id="sw-ameta">94% confidence</div>
+            </div>
+            <div class="sw-field">
+              <div class="sw-flabel">Date</div>
+              <div class="sw-fval" id="sw-date">2025-06-14</div>
+              <div class="sw-bar-w"><div class="sw-bar-f" id="sw-dbar" style="width:91%;background:var(--gd)"></div></div>
+              <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:3px" id="sw-dmeta">91% confidence</div>
+            </div>
+            <div class="sw-field">
+              <div class="sw-flabel">Merchant</div>
+              <div class="sw-fval" id="sw-merchant">City Supermarket</div>
+              <div class="sw-bar-w"><div class="sw-bar-f" id="sw-mbar" style="width:86%;background:var(--gd)"></div></div>
+              <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:3px" id="sw-mmeta">86% confidence</div>
+            </div>
+            <div class="sw-field">
+              <div class="sw-flabel">Category</div>
+              <div class="sw-fval" id="sw-cat">groceries</div>
+              <div class="sw-bar-w"><div class="sw-bar-f" id="sw-cbar" style="width:91%;background:var(--gd)"></div></div>
+              <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:3px" id="sw-cmeta">91% · merchant_match</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- API -->
+<section id="api" class="api-s">
+  <div class="inner">
+    <div class="rv">
+      <div class="slabel">API Reference</div>
+      <h2 class="stitle">Simple API.<br>Structured output.</h2>
+      <p class="ssub">One endpoint. Multipart form upload. JSON response with per-field confidence scores. Protected by API key — request access above.</p>
+    </div>
+    <div class="api-grid" style="margin-top:48px">
+      <div>
+        <div class="ep rv">
+          <div class="eph"><span class="mb">GET</span><span class="ep-path">/health</span></div>
+          <div class="code"><span class="cc">// No authentication required — keep-alive ping</span>
+{ <span class="ck">"status"</span>: <span class="cs">"ok"</span>, <span class="ck">"version"</span>: <span class="cs">"1.0.0"</span> }</div>
+        </div>
+        <div class="ep rv">
+          <div class="eph"><span class="mb">POST</span><span class="ep-path">/process</span></div>
+          <div class="code"><span class="cc">// multipart/form-data · field: "image"</span>
+<span class="cc">// header: X-Lumen-Key: your-api-key</span>
+
+{
+  <span class="ck">"success"</span>: <span class="cn">true</span>,
+  <span class="ck">"confidence"</span>: <span class="cs">"high"</span>,
+  <span class="ck">"extracted"</span>: {
+    <span class="ck">"amount"</span>:      { <span class="ck">"value"</span>: <span class="cn">4750.00</span>, <span class="ck">"confidence"</span>: <span class="cn">0.94</span>, <span class="ck">"currency_detected"</span>: <span class="cs">"LKR"</span> },
+    <span class="ck">"date"</span>:        { <span class="ck">"value"</span>: <span class="cs">"2025-01-15"</span>, <span class="ck">"confidence"</span>: <span class="cn">0.91</span>, <span class="ck">"format_detected"</span>: <span class="cs">"DD/MM/YYYY"</span> },
+    <span class="ck">"description"</span>: { <span class="ck">"suggested"</span>: <span class="cs">"City Supermarket"</span>, <span class="ck">"confidence"</span>: <span class="cn">0.86</span>, <span class="ck">"merchant_detected"</span>: <span class="cs">"City Supermarket"</span> },
+    <span class="ck">"category"</span>:    { <span class="ck">"suggested_type"</span>: <span class="cs">"groceries"</span>, <span class="ck">"confidence"</span>: <span class="cn">0.91</span>, <span class="ck">"signals_used"</span>: [<span class="cs">"merchant_match"</span>] }
+  },
+  <span class="ck">"needs_review"</span>: [],
+  <span class="ck">"processing_time_ms"</span>: <span class="cn">312</span>
+}</div>
+        </div>
+      </div>
+      <div class="bento rv">
+        <div class="bcard wide">
+          <div class="bcard-label">Speed</div>
+          <div class="bcard-num">&lt;400ms</div>
+          <div class="bcard-title">No cloud. No round-trips.</div>
+          <div class="bcard-desc">Tesseract and OpenCV run entirely inside the container. No external OCR API calls — the pipeline starts and ends on the same machine.</div>
+          <div class="bcard-bar"><div class="bcard-fill" style="width:94%"></div></div>
+        </div>
+        <div class="bcard">
+          <div class="bcard-label">Privacy</div>
+          <div class="bcard-title">Private by architecture</div>
+          <div class="bcard-desc">No images stored after processing. No user data retained between requests. Audit logs auto-purge after 24 hours.</div>
+        </div>
+        <div class="bcard">
+          <div class="bcard-label">Languages</div>
+          <div class="bcard-num">8+</div>
+          <div class="bcard-desc">English, Sinhala, Tamil, Arabic, Chinese, French, German, Spanish. Digit normalisation for Persian, Devanagari, Thai scripts.</div>
+        </div>
+        <div class="bcard">
+          <div class="bcard-label">Confidence</div>
+          <div class="bcard-title">Honest output</div>
+          <div class="bcard-desc">Every field returns a score 0–1. When uncertain, returns null — never guesses. A blank field beats a wrong number.</div>
+        </div>
+        <div class="bcard">
+          <div class="bcard-label">Integration</div>
+          <div class="bcard-title">Want to use this?</div>
+          <div class="bcard-desc">Lumen is an independent OCR service. <a href="#demo" style="color:var(--green);text-decoration:none">Request access above</a> and tell us what you're building.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="fl">
+    <div class="flogo">Lumen_Engine</div>
+    <div class="fby">
+      Built by <a href="https://github.com/Rit04-N" target="_blank">Rit04-N</a>
+      &nbsp;·&nbsp; Built with <a href="https://claude.ai" target="_blank">Claude (Anthropic)</a>
+    </div>
+  </div>
+  <div class="flinks">
+    <a href="https://github.com/Rit04-N" target="_blank">GitHub</a>
+    <a href="https://github.com/Rit04-N/Lumen_Engine" target="_blank">Repository</a>
+    <a href="https://lumen-engine.onrender.com/health" target="_blank">API Status ↗</a>
+  </div>
+</footer>
+
+<script>
+const LUMEN = 'https://lumen-engine.onrender.com';
+const FORMSPREE = 'https://formspree.io/f/xnjkozow'; // replace after creating Formspree form
+
+// ── TYPEWRITER ──
+const typed = document.getElementById('typed');
+let ci = 0;
+const word = 'Lumen_Engine';
+function type() {
+  typed.textContent = word.slice(0, ++ci);
+  if (ci < word.length) setTimeout(type, 75);
+  else typed.classList.add('done');
+}
+setTimeout(type, 700);
+
+// ── NAV ──
+window.addEventListener('scroll', () => document.getElementById('nav').classList.toggle('s', scrollY > 36));
+function toggleMenu() { document.getElementById('mmenu').classList.toggle('open'); }
+function closeMenu() { document.getElementById('mmenu').classList.remove('open'); }
+
+// ── REVEAL ──
+new IntersectionObserver(es => es.forEach(e => e.isIntersecting && e.target.classList.add('vis')), {threshold:0.08})
+  .observe && document.querySelectorAll('.rv').forEach(el => new IntersectionObserver(es => es.forEach(e => e.isIntersecting && e.target.classList.add('vis')), {threshold:0.08}).observe(el));
+
+// ── PIPELINE STEPS ──
+document.querySelectorAll('.ps').forEach(el => new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) setTimeout(() => e.target.classList.add('vis'), +e.target.dataset.d);
+}), {threshold:0.1}).observe(el));
+
+// ── FLOW LINE ──
+new IntersectionObserver(es => es.forEach(e => e.isIntersecting && e.target.classList.add('vis')), {threshold:0.4})
+  .observe(document.getElementById('fl'));
+
+// ── RATE LIMIT TRACKING (client-side, resets via localStorage) ──
+const RL_KEY = 'lumen_demo_rl';
+const RL_MAX = 10;
+const RL_WINDOW = 5 * 60 * 60 * 1000; // 5 hours ms
+
+function getRLState() {
+  try {
+    const s = JSON.parse(localStorage.getItem(RL_KEY) || '{}');
+    if (!s.reset || Date.now() > s.reset) return { count: 0, reset: Date.now() + RL_WINDOW };
+    return s;
+  } catch { return { count: 0, reset: Date.now() + RL_WINDOW }; }
+}
+function saveRLState(s) {
+  try { localStorage.setItem(RL_KEY, JSON.stringify(s)); } catch {}
+}
+function getRemainingRequests() {
+  const s = getRLState();
+  return Math.max(0, RL_MAX - s.count);
+}
+function incrementRL() {
+  const s = getRLState();
+  s.count++;
+  saveRLState(s);
+  return s;
+}
+function isRateLimited() { return getRemainingRequests() === 0; }
+function updateCounter() {
+  const rem = getRemainingRequests();
+  const el = document.getElementById('req-counter');
+  if (el) el.textContent = rem < RL_MAX ? `${rem} demo requests remaining · resets in 5h` : '';
+}
+updateCounter();
+
+// ── RATE LIMIT WALL ──
+let timerInterval = null;
+function showRLWall() {
+  document.getElementById('rlwall').classList.add('show');
+  document.getElementById('rp').style.display = 'none';
+  document.getElementById('dz').style.opacity = '0.4';
+  document.getElementById('dz').style.pointerEvents = 'none';
+  startTimer();
+}
+function startTimer() {
+  if (timerInterval) return;
+  timerInterval = setInterval(() => {
+    const s = getRLState();
+    const ms = Math.max(0, s.reset - Date.now());
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const sec = Math.floor((ms % 60000) / 1000);
+    document.getElementById('rltimer').textContent =
+      `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    if (ms === 0) { clearInterval(timerInterval); location.reload(); }
+  }, 1000);
+}
+if (isRateLimited()) showRLWall();
+
+// ── DRAG & DROP ──
+function dzev(type, e) {
+  e.preventDefault();
+  const z = document.getElementById('dz');
+  if (type === 'over') z.classList.add('over');
+  else if (type === 'leave') z.classList.remove('over');
+  else if (type === 'drop') { z.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) run(f); }
+}
+function onpick(e) { const f = e.target.files[0]; if (f) run(f); e.target.value = ''; }
+
+// ── PIPELINE ANIMATION (proportional to actual elapsed time) ──
+const pids = ['p1','p2','p3','p4','p5'];
+function resetProg() { pids.forEach(id => { const el=document.getElementById(id); el.classList.remove('act','done'); }); }
+function animProg(startTime, totalMs) {
+  resetProg();
+  const weights = [0.05, 0.30, 0.35, 0.20, 0.10]; // proportion of total time each stage takes
+  let acc = 0;
+  weights.forEach((w, i) => {
+    acc += w;
+    const delay = acc * totalMs;
+    setTimeout(() => {
+      if (i > 0) { document.getElementById(pids[i-1]).classList.remove('act'); document.getElementById(pids[i-1]).classList.add('done'); }
+      if (i < pids.length) document.getElementById(pids[i]).classList.add('act');
+    }, delay);
+  });
+}
+function finishProg() {
+  pids.forEach(id => { const el=document.getElementById(id); el.classList.remove('act'); el.classList.add('done'); });
+}
+
+// ── PROCESS ──
+async function run(file) {
+  if (isRateLimited()) { showRLWall(); return; }
+  if (file.size > 10 * 1024 * 1024) {
+    document.getElementById('rp').innerHTML = `<div class="errbox">File is too large. Maximum size is 10MB. Please compress the image before uploading.</div>`;
+    return;
+  }
+
+  const rp = document.getElementById('rp');
+  const sizeMB = (file.size/1048576).toFixed(2);
+  const isImg = file.type.startsWith('image/');
+  const thumbSrc = isImg ? URL.createObjectURL(file) : null;
+
+  rp.innerHTML = `<div class="lrow"><div class="spinner"></div><span>Running pipeline — this may take up to 30s if the server just woke up...</span></div>`;
+
+  const est = 2000; // estimated time for animation
+  animProg(Date.now(), est);
+
+  const fd = new FormData();
+  fd.append('image', file);
+  const t0 = Date.now();
+
+  try {
+    const r = await fetch(LUMEN + '/demo/process', {
+      method: 'POST',
+      body: fd,
+      signal: AbortSignal.timeout(45000)
+    });
+
+    const elapsed = Date.now() - t0;
+
+    if (r.status === 429) {
+      const d = await r.json();
+      resetProg();
+      incrementRL(); // sync client state
+      showRLWall();
+      return;
+    }
+
+    const d = await r.json();
+    incrementRL();
+    updateCounter();
+    if (isRateLimited()) {
+      finishProg();
+      render(d, file, elapsed, thumbSrc, sizeMB);
+      setTimeout(() => showRLWall(), 3000); // show results briefly then show wall
+      return;
+    }
+    finishProg();
+    render(d, file, elapsed, thumbSrc, sizeMB);
+  } catch(e) {
+    resetProg();
+    rp.innerHTML = `<div class="errbox">
+      <strong>Connection failed.</strong><br><br>
+      ${e.name === 'TimeoutError'
+        ? 'The server took too long to respond. This usually means it was sleeping and is now waking up — try again in 30 seconds.'
+        : `Error: ${e.message}`}
+    </div>`;
+  }
+}
+
+// ── RENDER RESULTS ──
+function pct(v) { return Math.round((v||0)*100); }
+function bbar(v) { return `<div class="bw"><div class="bf" data-t="${pct(v)}%"></div></div>`; }
+function fv(v, cls='') {
+  if (v===null||v===undefined||v==='') return `<div class="fval nil">—</div>`;
+  return `<div class="fval ${cls}">${v}</div>`;
+}
+
+function render(d, file, elapsed, thumbSrc, sizeMB) {
+  const rp = document.getElementById('rp');
+  const conf = d.confidence||'rejected';
+  const ms = d.processing_time_ms||elapsed;
+
+  const fbar = `<div class="file-bar">
+    ${thumbSrc?`<img class="file-thumb" src="${thumbSrc}" alt="Receipt thumbnail"/>`:`<div class="file-ico">📄</div>`}
+    <div><div class="fname">${file.name}</div><div class="fsize">${sizeMB} MB · ${file.type||'unknown'}</div></div>
+  </div>`;
+
+  if (!d.success) {
+    const diag = d.diagnostics?Object.entries(d.diagnostics).map(([k,v])=>`${k}: ${v}`).join(' · '):'';
+    rp.innerHTML = `${fbar}<span class="cbadge cr">✗ ${conf}</span>
+      <div class="errbox" style="margin-top:10px">${d.message||'Processing failed.'}${diag?`<br><br><span style="font-size:11px;font-family:var(--mono)">${diag}</span>`:''}</div>
+      <div class="ptime" style="margin-top:10px">${ms}ms</div>`;
+    return;
+  }
+
+  const ex = d.extracted;
+  const amt = ex.amount.value!==null?`${ex.amount.currency_detected||''} ${ex.amount.value}`.trim():null;
+  const tags = (d.needs_review||[]).length>0
+    ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">${d.needs_review.map(f=>`<span style="font-family:var(--mono);font-size:10px;color:var(--warn);background:#1a1305;border:0.5px solid #5a420a;border-radius:100px;padding:2px 8px;text-transform:uppercase">review ${f}</span>`).join('')}</div>`
+    : `<div style="font-family:var(--mono);font-size:11px;color:var(--gd);margin-bottom:10px">✓ all fields extracted</div>`;
+
+  rp.innerHTML = `${fbar}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span class="cbadge c${conf.charAt(0)}">${conf==='high'?'✓':'⚠'} ${conf} confidence</span>
+      <span class="ptime" style="margin:0">${ms}ms</span>
+    </div>
+    ${tags}
+    <div class="fgrid">
+      <div class="fb"><div class="flabel">Amount</div>${fv(amt,amt?'amt':'')}${bbar(ex.amount.confidence)}<div class="fmeta">${pct(ex.amount.confidence)}% confidence${ex.amount.currency_detected?' · '+ex.amount.currency_detected:''}</div></div>
+      <div class="fb"><div class="flabel">Date</div>${fv(ex.date.value)}${bbar(ex.date.confidence)}<div class="fmeta">${ex.date.format_detected||pct(ex.date.confidence)+'% confidence'}</div></div>
+      <div class="fb"><div class="flabel">Merchant</div>${fv(ex.description.suggested)}${bbar(ex.description.confidence)}<div class="fmeta">${pct(ex.description.confidence)}% confidence</div></div>
+      <div class="fb"><div class="flabel">Category</div>${fv(ex.category.suggested_type)}${bbar(ex.category.confidence)}<div class="fmeta">${(ex.category.signals_used||[]).join(' · ')||pct(ex.category.confidence)+'% confidence'}</div></div>
+    </div>
+    <button class="jtog" onclick="jtoggle(this)">▸ raw JSON</button>
+    <div class="jblock">${JSON.stringify(d,null,2)}</div>`;
+
+  setTimeout(() => document.querySelectorAll('.bf').forEach(b => { b.style.width = b.dataset.t; }), 80);
+}
+
+function jtoggle(btn) {
+  const b = btn.nextElementSibling;
+  const o = b.style.display==='block';
+  b.style.display = o?'none':'block';
+  btn.textContent = o?'▸ raw JSON':'▾ raw JSON';
+}
+
+// ── ACCESS FORM ──
+// ── CONFIDENCE SWITCHER ──
+const swStates = [
+  {
+    label: 'high confidence',
+    labelClass: 'color:var(--green);background:var(--gbg);border:0.5px solid var(--gd)',
+    ms: '312ms',
+    claim: 'A well-lit, straight-on photo of a printed receipt. All five pipeline stages complete successfully. Four fields extracted with high confidence.',
+    meta: 'Processing time: 312ms · OCR confidence: 0.91 · Stages: all passed',
+    amount: 'USD 47.83', abar: '94%', ameta: '94% confidence',
+    date: '2025-06-14', dbar: '91%', dmeta: '91% confidence',
+    merchant: 'City Supermarket', mbar: '86%', mmeta: '86% confidence',
+    category: 'groceries', cbar: '91%', cmeta: '91% · merchant_match',
+    amtClass: 'sw-fval g', dateClass: 'sw-fval', mClass: 'sw-fval', catClass: 'sw-fval',
+  },
+  {
+    label: 'rejected',
+    labelClass: 'color:var(--danger);background:#1a0808;border:0.5px solid #5a1a1a',
+    ms: '145ms',
+    claim: 'A photo taken at an angle in poor lighting. OCR confidence fell below the 60% threshold. Rather than guess, Lumen returns null for every uncertain field.',
+    meta: 'Processing time: 145ms · OCR confidence: 0.41 · Stage 3 quality gate: failed',
+    amount: '—', abar: '0%', ameta: '0% — not extracted',
+    date: '—', dbar: '0%', dmeta: '0% — not extracted',
+    merchant: '—', mbar: '0%', mmeta: '0% — not extracted',
+    category: 'uncategorized', cbar: '0%', cmeta: '0% — no signals',
+    amtClass: 'sw-fval nil', dateClass: 'sw-fval nil', mClass: 'sw-fval nil', catClass: 'sw-fval nil',
+  }
+];
+let swActive = 0;
+function swTab(i) {
+  swActive = i;
+  document.querySelectorAll('.sw-tab').forEach((t,j) => t.classList.toggle('active', i===j));
+  const s = swStates[i];
+  document.getElementById('sw-badge').textContent = s.label;
+  document.getElementById('sw-badge').style.cssText = `font-family:var(--mono);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;padding:3px 10px;border-radius:100px;${s.labelClass}`;
+  document.getElementById('sw-ms').textContent = s.ms;
+  document.getElementById('sw-claim').textContent = s.claim;
+  document.getElementById('sw-meta').textContent = s.meta;
+  document.getElementById('sw-amount').textContent = s.amount;
+  document.getElementById('sw-amount').className = s.amtClass;
+  document.getElementById('sw-abar').style.width = '0%';
+  document.getElementById('sw-ameta').textContent = s.ameta;
+  document.getElementById('sw-date').textContent = s.date;
+  document.getElementById('sw-date').className = s.dateClass;
+  document.getElementById('sw-dbar').style.width = '0%';
+  document.getElementById('sw-dmeta').textContent = s.dmeta;
+  document.getElementById('sw-merchant').textContent = s.merchant;
+  document.getElementById('sw-merchant').className = s.mClass;
+  document.getElementById('sw-mbar').style.width = '0%';
+  document.getElementById('sw-mmeta').textContent = s.mmeta;
+  document.getElementById('sw-cat').textContent = s.category;
+  document.getElementById('sw-cat').className = s.catClass;
+  document.getElementById('sw-cbar').style.width = '0%';
+  document.getElementById('sw-cmeta').textContent = s.cmeta;
+  const barColor = i === 0 ? 'var(--gd)' : 'var(--danger)';
+  setTimeout(() => {
+    document.getElementById('sw-abar').style.cssText = `width:${s.abar};background:${barColor};transition:width 0.6s ease`;
+    document.getElementById('sw-dbar').style.cssText = `width:${s.dbar};background:${barColor};transition:width 0.6s ease`;
+    document.getElementById('sw-mbar').style.cssText = `width:${s.mbar};background:${barColor};transition:width 0.6s ease`;
+    document.getElementById('sw-cbar').style.cssText = `width:${s.cbar};background:${barColor};transition:width 0.6s ease`;
+  }, 60);
+}
+
+async function submitAccess(e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('.form-submit');
+  btn.textContent = 'Sending...'; btn.disabled = true;
+  const body = {
+    name: document.getElementById('f-name').value,
+    email: document.getElementById('f-email').value,
+    what: document.getElementById('f-what').value,
+    link: document.getElementById('f-link').value,
+    volume: document.getElementById('f-vol').value,
+    country: document.getElementById('f-country').value,
+  };
+  try {
+    const r = await fetch(FORMSPREE, {
+      method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if (r.ok) {
+      document.getElementById('aform').style.display = 'none';
+      document.getElementById('fsuccess').style.display = 'block';
+    } else {
+      btn.textContent = 'Send access request →'; btn.disabled = false;
+      alert('Something went wrong. Please try again.');
+    }
+  } catch {
+    btn.textContent = 'Send access request →'; btn.disabled = false;
+    alert('Could not send. Check your connection and try again.');
+  }
+}
+</script>
+</body>
+</html>
