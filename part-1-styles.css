@@ -58,6 +58,18 @@ h1{font-size:clamp(40px,9vw,104px);font-weight:600;letter-spacing:-0.04em;line-h
 .btn-g{border:0.5px solid var(--border-b);color:var(--muted);padding:12px 26px;border-radius:var(--r);font-size:14px;text-decoration:none;transition:border-color 0.2s,color 0.2s}
 .btn-g:hover{border-color:var(--gd);color:var(--text)}
 
+/* hero paused-demo notice — fades in right after the CTA buttons so it
+   reads as part of the same intro sequence rather than an afterthought */
+.hero-notice{
+  display:inline-flex;gap:10px;align-items:center;
+  background:#1a1305;border:0.5px solid #5a420a;border-radius:100px;
+  padding:8px 18px;margin-top:28px;max-width:90%;
+  opacity:0;animation:fu 0.8s 1.35s forwards;
+}
+.hero-notice .icon{font-family:var(--mono);font-size:13px;color:var(--warn);flex-shrink:0}
+.hero-notice p{font-family:var(--mono);font-size:11.5px;color:var(--warn);line-height:1.5;margin:0;text-align:left}
+.hero-notice strong{color:var(--text)}
+
 /* floating data cards — appear while the title is still typing (short
    delays below), gentle bob afterwards, visible at every screen size
    instead of hard-hidden on mobile */
@@ -251,6 +263,8 @@ footer{border-top:0.5px solid var(--border);padding:40px 48px;max-width:1100px;m
   .fc.c{bottom:12%;left:4%}
   .fc.d{bottom:9%;right:4%}
   .stat{padding:0 12px}
+  .hero-notice{padding:8px 14px}
+  .hero-notice p{font-size:10.5px}
 }
 @media(max-width:420px){
   .stats{row-gap:8px}
